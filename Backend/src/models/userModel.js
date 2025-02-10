@@ -12,8 +12,7 @@ const userSchema = new mongoose.Schema(
     },
     googleId: {
       type: String,
-      unique: true,
-      sparse: true, // ✅ Allows multiple null values
+      sparse: true, // allows multiple null values
       default: null,
     },
     displayName: {
@@ -41,6 +40,7 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 
 userSchema.pre("save", async function (next) {
   // If the password is not being modified, skip the hashing process

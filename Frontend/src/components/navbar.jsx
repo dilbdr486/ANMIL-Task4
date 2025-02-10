@@ -1,10 +1,37 @@
-import React, { useContext } from "react";
-import { NavLink } from "react-router-dom";
+import React, { useContext, useState } from "react";
 import { appContext } from "../store/appStore";
+import axios from "axios";
+import { useNavigate,NavLink } from "react-router-dom";
 
 function Header() {
   const { userData, backendUrl, setUserData, setIsLoggedIn } =
     useContext(appContext);
+  const [showLogout, setShowLogout] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      // Send logout request to backend
+      await axios.post(
+        `${backendUrl}/api/v1/logout`,
+        {},
+        { withCredentials: true }
+      );
+
+      // Clear tokens from localStorage
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+
+      // Update login state
+      setIsLoggedIn(false);
+      setUserData(null);
+
+      // Redirect to login page
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <header className="shadow sticky z-50 top-0">
@@ -13,70 +40,29 @@ function Header() {
           <div>logo</div>
           <div>
             <ul className="flex justify-center gap-5 py-3">
-              <li>
-                <NavLink
-                  to="/"
-                  className={({ isActive }) =>
-                    ` block py-2 pr-2 pl-2 duration-200 ${
-                      isActive ? "text-green-300" : "font-bold"
-                    } border-gray-300 hover:bg-green-200 rounded-lg`
-                  }
-                >
-                  Home
-                </NavLink>
+              <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
+                Home
               </li>
-              <li>
-                <NavLink
-                  to="/services"
-                  className={({ isActive }) =>
-                    ` block py-2 pr-2 pl-2 duration-200 ${
-                      isActive ? "text-green-300" : "font-bold"
-                    } border-gray-300 hover:bg-green-200 rounded-lg`
-                  }
-                >
-                  Services
-                </NavLink>
+              <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
+                Services
               </li>
-              <li>
-                <NavLink
-                  to="/projects"
-                  className={({ isActive }) =>
-                    ` block py-2 pr-2 pl-2 duration-200 ${
-                      isActive ? "text-green-300" : "font-bold"
-                    } border-gray-300 hover:bg-green-200 rounded-lg`
-                  }
-                >
-                  Projects
-                </NavLink>
+              <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
+                Projects
               </li>
-              <li>
-                <NavLink
-                  to="/blogs"
-                  className={({ isActive }) =>
-                    ` block py-2 pr-2 pl-2 duration-200 ${
-                      isActive ? "text-green-300" : "font-bold"
-                    } border-gray-300 hover:bg-green-200 rounded-lg`
-                  }
-                >
-                  Blogs
-                </NavLink>
+              <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
+                Blogs
               </li>
-              <li>
-                <NavLink
-                  to="/about"
-                  className={({ isActive }) =>
-                    ` block py-2 pr-2 pl-2 duration-200 ${
-                      isActive ? "text-green-300" : "font-bold"
-                    } border-gray-300 hover:bg-green-200 rounded-lg`
-                  }
-                >
-                  About
-                </NavLink>
+              <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
+                About
               </li>
             </ul>
           </div>
           {userData ? (
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3 relative"
+              onMouseEnter={() => setShowLogout(true)}
+              onMouseLeave={() => setShowLogout(false)}
+            >
               <img
                 src={
                   userData.avatar.startsWith("http")
@@ -84,21 +70,27 @@ function Header() {
                     : `${backendUrl}/${userData.avatar}`
                 }
                 alt="User Avatar"
-                className="w-10 h-10 rounded-full border border-gray-300 shadow-sm"
+                className="w-10 h-10 rounded-full border border-gray-300 shadow-sm cursor-pointer"
               />
               <span className="font-medium">{userData.fullname}</span>
+
+              {showLogout && (
+                <button
+                  onClick={handleLogout}
+                  className="absolute top-10 right-0 bg-red-500 text-white py-1 px-4 rounded-lg shadow-md"
+                >
+                  Logout
+                </button>
+              )}
             </div>
           ) : (
             <div>
               <ul className="flex justify-center gap-5 py-3">
-                <li>
+                <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
+                  {/* Use NavLink for login */}
                   <NavLink
                     to="/login"
-                    className={({ isActive }) =>
-                      ` block py-2 pr-2 pl-2 duration-200 ${
-                        isActive ? "text-green-300" : "font-bold"
-                      } border-gray-300 hover:bg-green-200 rounded-lg`
-                    }
+                    className="text-blue-500 hover:text-blue-600 hover:underline"
                   >
                     Login
                   </NavLink>

@@ -1,21 +1,61 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { appContext } from "../store/appStore";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-function login({ onLogin }) {
+function Login({ onLogin }) {
   const [fullname, setFullname] = useState("");
   const [password, setPassword] = useState("");
   const [avatar, setAvatar] = useState(null);
   const [email, setEmail] = useState("");
   const [currState, setCurrState] = useState("Login");
+  const [passwordError, setPasswordError] = useState("");
   const { backendUrl, setIsLoggedIn, getUserData } = useContext(appContext);
   const navigate = useNavigate();
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // Password strength regex
+  const strongPasswordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+  const onGoogleHandler = () => {
+    window.location.href = `${backendUrl}/auth/google`;
+  };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('accessToken');
+    const refreshToken = urlParams.get('refreshToken');
+    if (accessToken && refreshToken) {
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      setIsLoggedIn(true);
+      getUserData();
+      navigate("/");
+    }
+  }, []);
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
+
+    if (!termsAccepted) {
+      alert("You must agree to the terms and conditions.");
+      return;
+    }
+
     axios.defaults.withCredentials = true;
-  
+
+    // Validate password strength
+    if (currState === "Sign Up" && !strongPasswordRegex.test(password)) {
+      setPasswordError(
+        "Password must be at least 8 characters long, include uppercase and lowercase letters, a number, and a special character."
+      );
+      return;
+    }
+
+    setPasswordError(""); // Clear any previous error
+
     try {
       if (currState === "Sign Up") {
         const formData = new FormData();
@@ -25,16 +65,19 @@ function login({ onLogin }) {
         if (avatar) {
           formData.append("avatar", avatar); // Append file
         }
-  
-        const { data } = await axios.post(backendUrl + "/api/v1/register", formData, {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "multipart/form-data", // Important for file uploads
-          },
-        });
-  
-        if (data.success) {
 
+        const { data } = await axios.post(
+          backendUrl + "/api/v1/register",
+          formData,
+          {
+            withCredentials: true,
+            headers: {
+              "Content-Type": "multipart/form-data", // Important for file uploads
+            },
+          }
+        );
+
+        if (data.success) {
           localStorage.setItem("accessToken", data.accessToken);
           localStorage.setItem("refreshToken", data.refreshToken);
 
@@ -50,9 +93,8 @@ function login({ onLogin }) {
           { email, password },
           { withCredentials: true }
         );
-  
-        if(data.success) {
-          
+
+        if (data.success) {
           localStorage.setItem("accessToken", data.accessToken);
           localStorage.setItem("refreshToken", data.refreshToken);
 
@@ -92,6 +134,7 @@ function login({ onLogin }) {
                   placeholder="Enter your full name"
                   value={fullname}
                   onChange={(e) => setFullname(e.target.value)}
+                  required
                 />
               </div>
               <div>
@@ -102,6 +145,7 @@ function login({ onLogin }) {
                   type="file"
                   className="block w-full py-2 px-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none placeholder-gray-400"
                   onChange={(e) => setAvatar(e.target.files[0])}
+                  required
                 />
               </div>
             </>
@@ -122,6 +166,7 @@ function login({ onLogin }) {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
 
@@ -135,7 +180,11 @@ function login({ onLogin }) {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
+              {passwordError && (
+                <p className="text-red-500 text-sm mt-2">{passwordError}</p>
+              )}
             </div>
 
             <div className="flex items-center justify-between">
@@ -179,9 +228,12 @@ function login({ onLogin }) {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 w-full">
               {/* Google Button */}
-              <button className="flex justify-center items-center py-3 px-4 border border-gray-300 bg-white rounded-lg shadow-md hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition duration-200">
+              <button
+                className="flex justify-center w-full items-center py-3 px-4 border border-gray-300 bg-white rounded-lg shadow-md hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition duration-200"
+                onClick={onGoogleHandler}
+              >
                 <svg className="h-5 w-5 text-blue-500" viewBox="0 0 24 24">
                   <path
                     d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032 s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2 C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
@@ -191,20 +243,16 @@ function login({ onLogin }) {
                 <span className="ml-2 text-gray-700 font-medium">Google</span>
               </button>
 
-              {/* LinkedIn Button */}
-              <button className="flex justify-center items-center py-3 px-4 border border-gray-300 bg-white rounded-lg shadow-md hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition duration-200">
-                <svg className="h-5 w-5 text-blue-700" viewBox="0 0 24 24">
-                  <path
-                    d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12-12zm-2 16h-2v-6h2v6zm-1-6.891c-.607 0-1.1-.496-1.1-1.109 0-.612.492-1.109 1.1-1.109s1.1.497 1.1 1.109c0 .613-.493 1.109-1.1 1.109zm8 6.891h-1.998v-2.861c0-1.881-2.002-1.722-2.002 0v2.861h-2v-6h2v1.093c.872-1.616 4-1.736 4 1.548v3.359z"
-                    fill="currentColor"
-                  ></path>
-                </svg>
-                <span className="ml-2 text-gray-700 font-medium">LinkedIn</span>
-              </button>
             </div>
 
             <div className="flex justify-start items-center gap-2 mt-1">
-              <input type="checkbox" required className="h-4 w-4" />
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                required
+                checked={termsAccepted}
+                onChange={() => setTermsAccepted(!termsAccepted)}
+              />
               <p className="text-gray-500">
                 By continuing, I agree to the terms of use & private
               </p>
@@ -237,4 +285,4 @@ function login({ onLogin }) {
   );
 }
 
-export default login;
+export default Login;

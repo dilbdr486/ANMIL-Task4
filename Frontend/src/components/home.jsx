@@ -1,15 +1,19 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { appContext } from "../store/appStore";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 function Home() {
-  const { backendUrl, setIsLoggedIn } = useContext(appContext);
+  const { backendUrl, setIsLoggedIn, getUserData } = useContext(appContext);
+  const { userData } = useContext(appContext);
   const navigate = useNavigate();
-  const {userData} = useContext(appContext)
 
-  
-  
+  useEffect(() => {
+    // Fetch user data when the component mounts (page reload)
+    if (!userData) {
+      getUserData();  // Ensure user data is fetched after reload
+    }
+  }, [getUserData, userData]);
 
   const handleLogout = async () => {
     try {
@@ -39,7 +43,7 @@ function Home() {
       {/* Card Container */}
       <div className="bg-white shadow-lg rounded-lg p-8 max-w-md w-full text-center">
         <h1 className="text-2xl font-semibold text-gray-800">
-        Hey  {userData? userData.fullname:"Developer"}👋
+          Hey {userData ? userData.fullname : "Developer"}👋
         </h1>
         <h2 className="text-3xl font-bold text-blue-600 mt-2">
           Welcome to Our App
