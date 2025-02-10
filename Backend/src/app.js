@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import GoogleStrategy from "passport-google-oauth20";
 import session from "express-session";
+import jwt from "jsonwebtoken";
 import { User } from "./models/userModel.js";
 
 const app = express();
@@ -12,13 +13,15 @@ app.use(
   session({
     secret: "secretcode",
     resave: false,
-    saveUninitialized: true,
   })
 );
 
+const allowedOrigins = ["http://localhost:5173"];
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin:allowedOrigins,
+    // origin: process.env.CORS_ORIGIN,
     credentials: true,
   })
 );

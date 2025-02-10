@@ -13,6 +13,8 @@ const userSchema = new mongoose.Schema(
     googleId: {
       type: String,
       unique: true,
+      sparse: true, // ✅ Allows multiple null values
+      default: null,
     },
     displayName: {
       type: String,
@@ -25,10 +27,10 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
+      default: null,
     },
     avatar: {
       type: String,
-      required: true,
     },
     activityLog: [
       {

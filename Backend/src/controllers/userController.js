@@ -3,6 +3,7 @@ import { asyncHandler } from "../utils/ayncHandler.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {ApiError} from "../utils/apiError.js"
+import jwt from 'jsonwebtoken'
 
 const generateAccessAndRefereshTokens = async (userId) => {
   try {
@@ -25,20 +26,22 @@ const generateAccessAndRefereshTokens = async (userId) => {
 const registerUser = asyncHandler(async (req, res) => {
   const { fullname, email, password } = req.body;
   console.log(req.body);
-  
 
+  // Check if any field is empty
   if ([fullname, email, password].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
 
+  // Check if user already exists
   const existedUser = await User.findOne({
-    $or: [{ fullname }, { email }],
+    $or: [{ email }],
   });
 
   if (existedUser) {
-    throw new ApiError(409, "User with username or email is existed");
+    throw new ApiError(409, "User with username or email already exists");
   }
 
+  // Handle avatar upload
   const avatarLocalPath = req.files.avatar[0]?.path;
 
   if (!avatarLocalPath) {
@@ -48,9 +51,10 @@ const registerUser = asyncHandler(async (req, res) => {
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
   if (!avatar) {
-    throw new ApiError(400, "Avatar file is required");
+    throw new ApiError(400, "Avatar upload failed");
   }
 
+  // Create the user
   const user = await User.create({
     fullname,
     avatar: avatar.url,
@@ -58,6 +62,7 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
   });
 
+  // Fetch user data without password or refreshToken
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
@@ -66,10 +71,27 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while registering the user");
   }
 
+  // Generate an access token for the user
+  const accessToken = jwt.sign(
+    { _id: createdUser._id },
+    process.env.GENERATE_ACCESS_TOKEN_SECRET,
+    { expiresIn: '1h' }  // Set token expiration time (1 hour)
+  );
+
+  // Send token as cookie
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true, // Ensures cookie is not accessible via JavaScript
+    secure: process.env.NODE_ENV === 'production', // Ensure secure flag in production
+    sameSite: 'Strict', // Prevents the cookie from being sent in cross-site requests
+    maxAge: 1000 * 60 * 60, // Expiry time of 1 hour
+  });
+
+  // Return response with the user data
   return res
     .status(201)
     .json(new ApiResponse(200, createdUser, "User registered Successfully"));
 });
+
 
 const loginUser = asyncHandler(async (req, res) => {
 
@@ -293,6 +315,14 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, 'Avatar image updated successfully'));
 });
 
+const isAuthenticated = async(req,res) =>{
+  try {
+    return res.json({message:"User is authenticated"});
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+}
+
 export { 
     generateAccessAndRefereshTokens, 
     registerUser,
@@ -302,5 +332,6 @@ export {
     changeCurrentPassword,
     getCurrentUser,
     updateAccountDetails,
-    updateUserAvatar
+    updateUserAvatar,
+    isAuthenticated
 };

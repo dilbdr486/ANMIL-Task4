@@ -7,7 +7,8 @@ import {
     changeCurrentPassword,
     getCurrentUser,
     updateAccountDetails,
-    updateUserAvatar
+    updateUserAvatar,
+    isAuthenticated
  } from "../controllers/userController.js"
  import {upload} from "../middlewares/multer.js"
  import {verifyJWT} from "../middlewares/auth.js"
@@ -32,6 +33,7 @@ userRoute.route('/refresh-token').post(refreshAccessToken);
 userRoute.route("/change-password").post(verifyJWT, changeCurrentPassword)
 userRoute.route("/current-user").get(verifyJWT, getCurrentUser)
 userRoute.route("/update-account").patch(verifyJWT, updateAccountDetails)
+userRoute.route("/auth").get(verifyJWT, isAuthenticated)
 
 userRoute.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
 
