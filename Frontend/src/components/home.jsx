@@ -48,6 +48,16 @@ function Home() {
         <h2 className="text-3xl font-bold text-blue-600 mt-2">
           Welcome to Our App
         </h2>
+        <h1 className="font-bold text-2xl">Log Activity</h1>
+        {
+          userData && userData.activityLog && userData.activityLog.map((log, index) => 
+            <div key={index}>
+              <p>{log.activity}</p>
+              <p>{new Date(log.timestamp).toLocaleString()}</p>
+            </div>
+          )
+        }
+        
       </div>
     </div>
   );

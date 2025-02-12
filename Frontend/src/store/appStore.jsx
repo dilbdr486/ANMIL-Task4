@@ -45,6 +45,18 @@ export const AppContextProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    console.log("User Data in Header:", userData); // Log userData whenever it changes
+  }, [userData]);
+  
+  const avatarUrl = userData?.avatar?.startsWith("http")
+    ? userData.avatar
+    : userData?.avatar
+    ? `${backendUrl}/${userData.avatar}`
+    : null;
+  
+  console.log("Avatar URL:", avatarUrl);
+
+  useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
     const refreshToken = localStorage.getItem("refreshToken");
 

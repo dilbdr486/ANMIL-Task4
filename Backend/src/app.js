@@ -43,28 +43,27 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, cb) => {
       try {
-        // Check if the user already exists using Google ID
+        console.log("Google profile data:", profile);
+
         let user = await User.findOne({ googleId: profile.id });
 
         if (!user) {
-          // If the user doesn't exist, create a new one
           user = new User({
             googleId: profile.id,
             displayName: profile.displayName,
             email: profile.emails[0].value,
-            avatar: profile.photos ? profile.photos[0].value : null, // Use Google profile avatar
-            password: null, // No password needed for OAuth users
-            fullname: profile.displayName, // Optional: Use `profile.name` or `displayName`
+            avatar: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null,
+            password: null,
+            fullname: profile.displayName,
           });
 
-          // Save the new user in the database
           await user.save();
         }
 
-        // Return the user object for session
+
         return cb(null, user);
       } catch (err) {
-        return cb(err, null); // Handle any error during the process
+        return cb(err, null); s
       }
     }
   )
@@ -89,19 +88,17 @@ app.get(
     const user = req.user;
 
     try {
-      // Generate JWT tokens after successful login
       const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id);
 
-      // Set JWT tokens as cookies (httpOnly, secure in production)
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+        secure: process.env.NODE_ENV === "production",
         maxAge: 3600000, // 1 hour expiry
       });
 
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+        secure: process.env.NODE_ENV === "production",
         maxAge: 86400000, // 1 day expiry
       });
 
@@ -109,20 +106,20 @@ app.get(
       res.redirect(`http://localhost:5173/?accessToken=${accessToken}&refreshToken=${refreshToken}`);
     } catch (err) {
       console.error("Error generating tokens:", err);
-      res.redirect("/"); // Handle failure gracefully
+      res.redirect("/");
     }
   }
 );
 
 
-app.get("/profile", (req, res) => {
-  res.send(`Hello ${req.user.displayName}`);
-});
+// app.get("/profile", (req, res) => {
+//   res.send(`Hello ${req.user.displayName}`);
+// });
 
-app.get("/logout", (req, res) => {
-  req.logout();
-  res.redirect("/");
-});
+// app.get("/logout", (req, res) => {
+//   req.logout();
+//   res.redirect("/");
+// });
 
 // import routes
 import userRoutes from "./routes/userRoute.js";

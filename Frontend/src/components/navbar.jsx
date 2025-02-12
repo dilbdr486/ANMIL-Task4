@@ -1,13 +1,20 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { appContext } from "../store/appStore";
 import axios from "axios";
-import { useNavigate,NavLink } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 
 function Header() {
   const { userData, backendUrl, setUserData, setIsLoggedIn } =
     useContext(appContext);
   const [showLogout, setShowLogout] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (userData) {
+      setLoading(false);
+    }
+  }, [userData]);
 
   const handleLogout = async () => {
     try {
@@ -33,6 +40,20 @@ function Header() {
     }
   };
 
+  // Debugging: Log userData and avatar URL
+  const avatarUrl = userData?.avatar?.startsWith("http")
+    ? userData.avatar
+    : userData?.avatar
+    ? `${backendUrl}/${userData.avatar}`
+    : null;
+
+  // Debugging: Log userData and avatar URL
+  console.log("User Data:", userData);
+  console.log("Avatar URL:", avatarUrl);
+
+  if (!userData) {
+    return <div>Loading...</div>; 
+  }
   return (
     <header className="shadow sticky z-50 top-0">
       <nav className="border-gray-200 px-4 lg:px-6 py-2.5 bg-slate-50 font-bold">
@@ -44,14 +65,10 @@ function Header() {
                 Home
               </li>
               <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
+                <NavLink to='/activity'>
                 Services
-              </li>
-              <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
-                Projects
-              </li>
-              <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
-                Blogs
-              </li>
+                </NavLink>
+                </li>
               <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
                 About
               </li>
@@ -63,15 +80,13 @@ function Header() {
               onMouseEnter={() => setShowLogout(true)}
               onMouseLeave={() => setShowLogout(false)}
             >
-              <img
-                src={
-                  userData.avatar.startsWith("http")
-                    ? userData.avatar
-                    : `${backendUrl}/${userData.avatar}`
-                }
-                alt="User Avatar"
-                className="w-10 h-10 rounded-full border border-gray-300 shadow-sm cursor-pointer"
-              />
+              {avatarUrl && (
+                <img
+                  src={avatarUrl}
+                  alt="User Avatar"
+                  className="w-10 h-10 rounded-full border border-gray-300 shadow-sm cursor-pointer"
+                />
+              )}
               <span className="font-medium">{userData.fullname}</span>
 
               {showLogout && (
@@ -87,7 +102,6 @@ function Header() {
             <div>
               <ul className="flex justify-center gap-5 py-3">
                 <li className="block py-2 pr-2 pl-2 duration-200 hover:bg-green-200 rounded-lg">
-                  {/* Use NavLink for login */}
                   <NavLink
                     to="/login"
                     className="text-blue-500 hover:text-blue-600 hover:underline"
