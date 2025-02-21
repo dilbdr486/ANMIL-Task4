@@ -102,8 +102,8 @@ app.get(
         maxAge: 86400000, // 1 day expiry
       });
 
-      // Redirect to frontend with tokens
-      res.redirect(`http://localhost:5173/?accessToken=${accessToken}&refreshToken=${refreshToken}`);
+      // Redirect to frontend with tokens and avatar URL
+      res.redirect(`http://localhost:5173/?accessToken=${accessToken}&refreshToken=${refreshToken}&avatar=${user.avatar}`);
     } catch (err) {
       console.error("Error generating tokens:", err);
       res.redirect("/");

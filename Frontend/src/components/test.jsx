@@ -10,11 +10,10 @@ function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [currState, setCurrState] = useState("Login");
   const [passwordError, setPasswordError] = useState("");
-  const [loginError, setLoginError] = useState("");
   const { backendUrl, setIsLoggedIn, getUserData } = useContext(appContext);
   const navigate = useNavigate();
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [error, setError] = useState("");
+  const [loginError, setLoginError] = useState("");
 
   // Password strength regex
   const strongPasswordRegex =
@@ -26,13 +25,12 @@ function Login({ onLogin }) {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('accessToken');
-    const refreshToken = urlParams.get('refreshToken');
-    const avatar = urlParams.get('avatar'); // Add this line to get the avatar URL
+    const accessToken = urlParams.get("accessToken");
+    const refreshToken = urlParams.get("refreshToken");
     if (accessToken && refreshToken) {
+      localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("avatar", avatar); // Store avatar URL in local storage
-      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
       setIsLoggedIn(true);
       getUserData();
       navigate("/");
@@ -41,56 +39,27 @@ function Login({ onLogin }) {
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
+    setLoginError(""); // Clear previous errors
 
     if (!termsAccepted) {
       alert("You must agree to the terms and conditions.");
       return;
     }
 
-    axios.defaults.withCredentials = true;
-
     // Validate password strength
-    if (currState === "Sign Up" && !strongPasswordRegex.test(password)) {
+    if (!strongPasswordRegex.test(password)) {
       setPasswordError(
-        "Password must be at least 8 characters long, include uppercase and lowercase letters, a number, and a special character."
+        "Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character."
       );
       return;
+    } else {
+      setPasswordError(""); // Clear the error if password is valid
     }
 
-    setPasswordError(""); // Clear any previous error
+    axios.defaults.withCredentials = true;
 
     try {
-      if (currState === "Sign Up") {
-        const formData = new FormData();
-        formData.append("fullname", fullname);
-        formData.append("email", email);
-        formData.append("password", password);
-        if (avatar) {
-          formData.append("avatar", avatar); // Append file
-        }
-
-        const { data } = await axios.post(
-          backendUrl + "/api/v1/register",
-          formData,
-          {
-            withCredentials: true,
-            headers: {
-              "Content-Type": "multipart/form-data", // Important for file uploads
-            },
-          }
-        );
-
-        if (data.success) {
-          localStorage.setItem("accessToken", data.accessToken);
-          localStorage.setItem("refreshToken", data.refreshToken);
-
-          setIsLoggedIn(true);
-          getUserData();
-          navigate("/");
-        } else {
-          alert(data.message);
-        }
-      } else {
+      if (currState === "Login") {
         const { data } = await axios.post(
           backendUrl + "/api/v1/login",
           { email, password },
@@ -105,26 +74,35 @@ function Login({ onLogin }) {
           getUserData();
           navigate("/");
         } else {
-          setLoginError(data.message);
+          setLoginError(data.message || "Invalid email or password.");
+        }
+      } else {
+        const { data } = await axios.post(
+          backendUrl + "/api/v1/signup",
+          { fullname, email, password, avatar },
+          { withCredentials: true }
+        );
+
+        if (data.success) {
+          setCurrState("Login");
+          alert("Account created successfully. Please log in.");
+        } else {
+          setLoginError(data.message || "User already exists.");
         }
       }
     } catch (error) {
-      if (error.response) {
-        if (error.response.status === 401) {
-          setError("Invalid credentials");
-        } else if (error.response.status === 404) {
-          setError("User does not exist");
-        } else if (error.response.status === 409) {
-          setError("User already exists");
-        } else if (error.response.status === 423) {
-          setError("User is locked for 5 minutes. Please try again later.");
-        } else {
-          setError("User is locked for 5 minutes. Please try again later.");
-        }
-        // Log login failure
-        console.error("Login failed:", error.response.data.message);
+      console.error("Request failed:", error);
+      if (error.response && error.response.status === 401) {
+        setLoginError("Invalid email or password.");
+      } else if (error.response && error.response.status === 403) {
+        setLoginError(
+          error.response.data.message ||
+            "Account is locked for 5 minutes. Try again later."
+        );
+      } else if (error.response && error.response.status === 404) {
+        setLoginError("User not found or does not exist.");
       } else {
-        setError("An error occurred. Please try again.");
+        setLoginError("An error occurred. Please try again later.");
       }
     }
   };
@@ -204,10 +182,6 @@ function Login({ onLogin }) {
               {passwordError && (
                 <p className="text-red-500 text-sm mt-2">{passwordError}</p>
               )}
-              {loginError && (
-                <p className="text-red-500 text-sm mt-2">{loginError}</p>
-              )}
-              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             </div>
 
             <div className="flex items-center justify-between">
@@ -237,6 +211,9 @@ function Login({ onLogin }) {
                 {currState === "Sign Up" ? "Create Account" : "Login"}
               </button>
             </div>
+            {loginError && (
+              <p className="text-red-500 text-sm mt-2">{loginError}</p>
+            )}
           </form>
 
           <div className="mt-4">
@@ -265,7 +242,6 @@ function Login({ onLogin }) {
                 </svg>
                 <span className="ml-2 text-gray-700 font-medium">Google</span>
               </button>
-
             </div>
 
             <div className="flex justify-start items-center gap-2 mt-1">

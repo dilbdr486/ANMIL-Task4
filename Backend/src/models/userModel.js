@@ -37,6 +37,13 @@ const userSchema = new mongoose.Schema(
         timestamp: Date,
       },
     ],
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
@@ -81,6 +88,26 @@ userSchema.methods.generateRefreshToken = function () {
       expiresIn: process.env.REFRESH_EXPIRY_TOKEN_SECRET,
     }
   );
+};
+
+userSchema.methods.incrementLoginAttempts = async function () {
+  if (this.lockUntil && this.lockUntil > Date.now()) {
+    return;
+  }
+
+  this.loginAttempts += 1;
+
+  if (this.loginAttempts >= 5) {
+    this.lockUntil = Date.now() + 5 * 60 * 1000; // lock for 5 minutes
+  }
+
+  await this.save();
+};
+
+userSchema.methods.resetLoginAttempts = async function () {
+  this.loginAttempts = 0;
+  this.lockUntil = undefined;
+  await this.save();
 };
 
 export const User = mongoose.model("User", userSchema);

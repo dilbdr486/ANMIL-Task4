@@ -39,21 +39,21 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User with username or email is existed");
   }
 
-  // const avatarLocalPath = req.files.avatar[0]?.path;
+  const avatarLocalPath = req.files.avatar[0]?.path;
 
-  // if (!avatarLocalPath) {
-  //   throw new ApiError(400, "Avatar file is required");
-  // }
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is required");
+  }
 
-  // const avatar = await uploadOnCloudinary(avatarLocalPath);
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
 
-  // if (!avatar) {
-  //   throw new ApiError(400, "Avatar file is required");
-  // }
+  if (!avatar) {
+    throw new ApiError(400, "Avatar file is required");
+  }
 
   const user = await User.create({
     fullname,
-    // avatar: avatar.url,
+    avatar: avatar.url,
     email,
     password,
   });
@@ -72,35 +72,34 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-
   const { email, password } = req.body;
-  // console.log(email);
 
   if (!email) {
-    throw new ApiError(400, 'username or email is required');
+    throw new ApiError(400, 'Email is required');
   }
 
-  const user = await User.findOne({
-    $or: [{ email }],
-  });
+  const user = await User.findOne({ email });
 
   if (!user) {
     throw new ApiError(404, 'User does not exist');
   }
 
+  if (user.lockUntil && user.lockUntil > Date.now()) {
+    throw new ApiError(403, 'Account is locked. Try again later.');
+  }
+
   const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
+    await user.incrementLoginAttempts();
+    user.activityLog.push({ activity: 'Failed Login Attempt', timestamp: new Date() });
+    await user.save();
     throw new ApiError(401, 'Invalid user credentials');
   }
 
-  const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(
-    user._id
-  );
+  await user.resetLoginAttempts();
 
-  const loggedInUser = await User.findById(user._id).select(
-    '-password -refreshToken'
-  );
+  const loggedInUser = await User.findById(user._id).select('-password -refreshToken');
 
   const options = {
     httpOnly: true,
@@ -110,8 +109,7 @@ const loginUser = asyncHandler(async (req, res) => {
   user.activityLog.push({ activity: 'Logged In', timestamp: new Date() });
   await user.save();
 
-  console.log("user Logged in");
-  
+  const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id);
 
   return res
     .status(200)

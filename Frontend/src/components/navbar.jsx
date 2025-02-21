@@ -51,9 +51,6 @@ function Header() {
   console.log("User Data:", userData);
   console.log("Avatar URL:", avatarUrl);
 
-  if (!userData) {
-    return <div>Loading...</div>; 
-  }
   return (
     <header className="shadow sticky z-50 top-0">
       <nav className="border-gray-200 px-4 lg:px-6 py-2.5 bg-slate-50 font-bold">
